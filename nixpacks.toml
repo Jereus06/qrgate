@@ -5,4 +5,5 @@ nixPkgs = ["php82", "php82Extensions.mysqli", "php82Extensions.pdo_mysql", "php8
 cmds = []
 
 [start]
-cmd = "php -S 0.0.0.0:8080 -t /app"
+cmd = "php -S 0.0.0.0:3306 -t /app"
+
