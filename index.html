@@ -116,30 +116,12 @@
 
         function generateQRCode(text, size=300){
             const encoded = encodeURIComponent(text);
-            const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}`;
+            const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&format=png&ecc=H&margin=20&color=000000&bgcolor=ffffff&data=${encoded}`;
             const img = document.createElement('img');
             img.src = url;
             img.alt = 'QR Code';
             img.style.maxWidth = '100%';
-            img.crossOrigin = 'anonymous'; // allow canvas conversion
             return img;
-        }
-
-        // convert an <img> element to a data URL using a canvas
-        function imageToDataURL(img, callback){
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-            try {
-                const dataURL = canvas.toDataURL('image/png');
-                callback(null, dataURL);
-            } catch(err){
-                callback(err);
-            }
         }
 
         function escapeHtml(text) {
@@ -179,7 +161,8 @@
                     return; 
                 }
 
-                const qrImg = generateQRCode(data.qr_code, 300);
+                const qrDownloadUrl = `https://api.qrserver.com/v1/create-qr-code/?size=800x800&format=png&ecc=H&margin=20&color=000000&bgcolor=ffffff&data=${encodeURIComponent(data.qr_code)}`;
+                const qrImg = generateQRCode(data.qr_code, 320);
                 const qrDiv = document.getElementById('qrcode');
                 qrDiv.innerHTML='';
                 qrDiv.appendChild(qrImg);
@@ -189,7 +172,7 @@
                 qrInfo.innerHTML = `<p><strong>QR Code ID:</strong> ${escapeHtml(data.qr_code)}</p>`;
                 qrDiv.appendChild(qrInfo);
 
-                // create download link once the image has loaded and been converted to a data URL
+                // Use direct PNG URL to avoid cross-origin canvas conversion issues.
                 const downloadLink = document.createElement('a');
                 downloadLink.textContent = '⬇️ Download QR Code';
                 downloadLink.style.display = 'none';
@@ -197,17 +180,9 @@
                 qrDiv.appendChild(downloadLink);
 
                 qrImg.onload = function(){
-                    imageToDataURL(qrImg, function(err, dataURL){
-                        if(err){
-                            console.warn('Unable to convert QR image for download:', err);
-                            // fallback: allow browser to open in new tab instead
-                            downloadLink.href = qrImg.src;
-                        } else {
-                            downloadLink.href = dataURL;
-                        }
-                        downloadLink.download = 'qrcode.png';
-                        downloadLink.style.display = 'block';
-                    });
+                    downloadLink.href = qrDownloadUrl;
+                    downloadLink.download = `qrcode-${data.qr_code}.png`;
+                    downloadLink.style.display = 'block';
                 };
                 qrImg.onerror = function(){
                     showMessage('Failed to load QR image for download','error');
@@ -243,5 +218,4 @@
         });
     </script>
 </body>
-
 </html>
