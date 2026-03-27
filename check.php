@@ -2,7 +2,7 @@
 // Set timezone to Philippines
 date_default_timezone_set('Asia/Manila');
 
-require __DIR__.'/db.php';
+require __DIR__ . '/db.php';
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
@@ -53,7 +53,7 @@ try {
         if ($log) { $log->bind_param('is', $visitor_id, $qr); $log->execute(); }
 
         echo json_encode([
-            'status' => 'AlreadyExited',
+            'status' => 'Exited',
             'msg'    => 'Visitor has already exited. Re-entry is not allowed.',
             'visitor_id'   => $visitor_id,
             'visitor_name' => $row['full_name']
@@ -61,7 +61,27 @@ try {
         exit;
     }
 
-    // ── 3. Valid — allow entry ────────────────────────────────────────────────
+    // ── 3. Currently inside — this scan should be treated as exit ────────────
+    if ($row['last_status'] === 'Inside') {
+        $log = $mysqli->prepare("INSERT INTO logs(visitor_id, qr_code, status) VALUES(?, ?, 'Inside')");
+        if ($log) { $log->bind_param('is', $visitor_id, $qr); $log->execute(); }
+
+        echo json_encode([
+            'status'       => 'Inside',
+            'msg'          => 'Visitor is currently inside. Proceed to exit flow.',
+            'visitor_id'   => $visitor_id,
+            'visitor_name' => $row['full_name'],
+            'email'        => $row['email'],
+            'phone'        => $row['phone'],
+            'purpose'      => $row['purpose'],
+            'host'         => $row['host'],
+            'expires_at'   => $row['expiry_at'],
+            'current_time' => $current_time
+        ]);
+        exit;
+    }
+
+    // ── 4. Valid — allow entry ────────────────────────────────────────────────
     $log = $mysqli->prepare("INSERT INTO logs(visitor_id, qr_code, status) VALUES(?, ?, 'Valid')");
     if ($log) { $log->bind_param('is', $visitor_id, $qr); $log->execute(); }
 
@@ -70,7 +90,7 @@ try {
     if ($upd) { $upd->bind_param('ssi', $current_time, $current_time, $visitor_id); $upd->execute(); }
 
     echo json_encode([
-        'status'       => 'Inside',
+        'status'       => 'Valid',
         'visitor_id'   => $visitor_id,
         'visitor_name' => $row['full_name'],
         'email'        => $row['email'],
@@ -83,6 +103,10 @@ try {
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['status'=>'Error', 'msg'=>'Database error: ' . $e->getMessage()]);
+    echo json_encode([
+        'ok' => false, 
+        'msg' => 'Database error: ' . $e->getMessage()
+    ]);
 }
 ?>
+
