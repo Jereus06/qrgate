@@ -107,6 +107,7 @@
         <div id="visitorDetails"></div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <script>
         function showMessage(text, type='success'){
             const msgDiv = document.getElementById('messages');
@@ -114,14 +115,20 @@
             setTimeout(()=>{ msgDiv.innerHTML=''; }, 5000);
         }
 
-        function generateQRCode(text, size=300){
-            const encoded = encodeURIComponent(text);
-            const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&format=png&ecc=H&margin=20&color=000000&bgcolor=ffffff&data=${encoded}`;
-            const img = document.createElement('img');
-            img.src = url;
-            img.alt = 'QR Code';
-            img.style.maxWidth = '100%';
-            return img;
+        function generateQRCodeCanvas(text, size=320){
+            const canvas = document.createElement('canvas');
+            new QRious({
+                element: canvas,
+                value: text,
+                size: size,
+                level: 'H',
+                foreground: '#000000',
+                background: '#ffffff',
+                padding: 20
+            });
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
+            return canvas;
         }
 
         function escapeHtml(text) {
@@ -161,32 +168,25 @@
                     return; 
                 }
 
-                const qrDownloadUrl = `https://api.qrserver.com/v1/create-qr-code/?size=800x800&format=png&ecc=H&margin=20&color=000000&bgcolor=ffffff&data=${encodeURIComponent(data.qr_code)}`;
-                const qrImg = generateQRCode(data.qr_code, 320);
+                const qrCanvas = generateQRCodeCanvas(data.qr_code, 320);
                 const qrDiv = document.getElementById('qrcode');
                 qrDiv.innerHTML='';
-                qrDiv.appendChild(qrImg);
+                qrDiv.appendChild(qrCanvas);
 
                 const qrInfo = document.createElement('div');
                 qrInfo.className = 'qr-code-info';
                 qrInfo.innerHTML = `<p><strong>QR Code ID:</strong> ${escapeHtml(data.qr_code)}</p>`;
                 qrDiv.appendChild(qrInfo);
 
-                // Use direct PNG URL to avoid cross-origin canvas conversion issues.
+                // Create a high-resolution local PNG for reliable downloading/scanning.
                 const downloadLink = document.createElement('a');
                 downloadLink.textContent = '⬇️ Download QR Code';
-                downloadLink.style.display = 'none';
+                const downloadCanvas = generateQRCodeCanvas(data.qr_code, 900);
+                downloadLink.href = downloadCanvas.toDataURL('image/png');
+                downloadLink.download = `qrcode-${data.qr_code}.png`;
+                downloadLink.style.display = 'inline-block';
                 downloadLink.style.marginTop = '10px';
                 qrDiv.appendChild(downloadLink);
-
-                qrImg.onload = function(){
-                    downloadLink.href = qrDownloadUrl;
-                    downloadLink.download = `qrcode-${data.qr_code}.png`;
-                    downloadLink.style.display = 'block';
-                };
-                qrImg.onerror = function(){
-                    showMessage('Failed to load QR image for download','error');
-                };
 
                 const visitorDiv = document.getElementById('visitorDetails');
                 visitorDiv.innerHTML = `<div class="visitor-info">
