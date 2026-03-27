@@ -136,3 +136,4 @@ function calculateDuration($entry_time, $exit_time) {
     return trim($duration);
 }
 ?>
+
