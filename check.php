@@ -53,7 +53,7 @@ try {
         if ($log) { $log->bind_param('is', $visitor_id, $qr); $log->execute(); }
 
         echo json_encode([
-            'status' => 'Exited',
+            'status' => 'AlreadyExited',
             'msg'    => 'Visitor has already exited. Re-entry is not allowed.',
             'visitor_id'   => $visitor_id,
             'visitor_name' => $row['full_name']
@@ -61,27 +61,7 @@ try {
         exit;
     }
 
-    // ── 3. Currently inside — this scan should be treated as exit ────────────
-    if ($row['last_status'] === 'Inside') {
-        $log = $mysqli->prepare("INSERT INTO logs(visitor_id, qr_code, status) VALUES(?, ?, 'Inside')");
-        if ($log) { $log->bind_param('is', $visitor_id, $qr); $log->execute(); }
-
-        echo json_encode([
-            'status'       => 'Inside',
-            'msg'          => 'Visitor is currently inside. Proceed to exit flow.',
-            'visitor_id'   => $visitor_id,
-            'visitor_name' => $row['full_name'],
-            'email'        => $row['email'],
-            'phone'        => $row['phone'],
-            'purpose'      => $row['purpose'],
-            'host'         => $row['host'],
-            'expires_at'   => $row['expiry_at'],
-            'current_time' => $current_time
-        ]);
-        exit;
-    }
-
-    // ── 4. Valid — allow entry ────────────────────────────────────────────────
+    // ── 3. Valid — allow entry ────────────────────────────────────────────────
     $log = $mysqli->prepare("INSERT INTO logs(visitor_id, qr_code, status) VALUES(?, ?, 'Valid')");
     if ($log) { $log->bind_param('is', $visitor_id, $qr); $log->execute(); }
 
@@ -90,7 +70,7 @@ try {
     if ($upd) { $upd->bind_param('ssi', $current_time, $current_time, $visitor_id); $upd->execute(); }
 
     echo json_encode([
-        'status'       => 'Valid',
+        'status'       => 'Inside',
         'visitor_id'   => $visitor_id,
         'visitor_name' => $row['full_name'],
         'email'        => $row['email'],
